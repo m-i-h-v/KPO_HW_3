@@ -43,16 +43,4 @@ public sealed class CreateAccountService : ICreateAccountService
 
 		return account;
 	}
-
-	public async Task<InboxMessage> GetInboxMessageAsync(Guid orderId, CancellationToken cancellationToken)
-	{
-        var account = await _context.InboxMessages.Where(a => a.Id == orderId).FirstOrDefaultAsync(cancellationToken);
-
-        if (account == null)
-        {
-            throw new InvalidOperationException("Account not found");
-        }
-
-        return account;
-    }
 }
