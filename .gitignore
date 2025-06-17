@@ -1,0 +1,10 @@
+/OrdersService/bin
+/OrdersService/obj
+/OrdersService/Properties
+/OrdersService.Tests/bin
+/OrdersService.Tests/obj
+/PaymentsService/bin
+/PaymentsService/obj
+/PaymentsService/Properties
+/PaymentsService.Tests/bin
+/PaymentsService.Tests/obj

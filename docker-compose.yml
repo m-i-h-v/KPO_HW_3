@@ -1,0 +1,81 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.4.3
+    ports:
+      - "9092:9092"
+    expose:
+      - "29092"
+      - "9093"
+    environment:
+      ALLOW_PLAINTEXT_LISTENER: yes
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CLIENT:PLAINTEXT, LOCALHOST:PLAINTEXT, SERVICE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: CLIENT
+      KAFKA_ADVERTISED_LISTENERS: CLIENT://kafka:29092, LOCALHOST://localhost:9092, SERVICE://kafka:9093
+      KAFKA_LISTENERS: CLIENT://kafka:29092,LOCALHOST://0.0.0.0:9092,SERVICE://0.0.0.0:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+  kafka-init:
+    image: confluentinc/cp-kafka:7.4.3
+    depends_on:
+      - kafka
+    entrypoint: ["sh", "-c"]
+    command: |
+      "
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic payment-tasks --replication-factor 1 --partitions 1 &&
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic order-status --replication-factor 1 --partitions 1
+      "
+
+  orders-service-db:
+    image: postgres:13
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_PASSWORD: orders-service-db-pass
+      POSTGRES_DB: orders-service-db
+      POSTGRES_USER: orders-service-db
+
+  orders-service:
+    build:
+      context: .
+      dockerfile: OrdersService.Dockerfile
+    ports:
+      - "8081:8080"
+    depends_on:
+      - kafka
+      - orders-service-db
+    environment:
+      CONNECTIONSTRINGS__Default: Host=orders-service-db;Database=orders-service-db;Username=orders-service-db;Password=orders-service-db-pass
+      KAFKA__BOOTSTRAPSERVERS: kafka:29092
+      ASPNETCORE_ENVIRONMENT: Development
+
+  payments-service-db:
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: payments-service-db-pass
+      POSTGRES_DB: payments-service-db
+      POSTGRES_USER: payments-service-db
+
+  payments-service:
+    build:
+      context: .
+      dockerfile: PaymentsService.Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - kafka
+      - payments-service-db
+    environment:
+      CONNECTIONSTRINGS__Default: Host=payments-service-db;Database=payments-service-db;Username=payments-service-db;Password=payments-service-db-pass
+      KAFKA__BOOTSTRAPSERVERS: kafka:29092
+      ASPNETCORE_ENVIRONMENT: Development
